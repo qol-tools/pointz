@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import '../../../domain/models/touch_action.dart';
 import '../../../domain/models/gesture_event.dart';
 import '../state/gesture_state.dart';
@@ -73,6 +74,9 @@ class MoveHandler {
     final moveX = dx * _config.mouseSensitivity * acceleration;
     final moveY = dy * _config.mouseSensitivity * acceleration;
 
+    if (kDebugMode) {
+      print('[CLIENT] mouseMove: dx=$dx dy=$dy -> moveX=${moveX.toStringAsFixed(2)} moveY=${moveY.toStringAsFixed(2)}');
+    }
     await _executor.mouseMove(moveX, moveY);
     _state.previousX = event.x;
     _state.previousY = event.y;
