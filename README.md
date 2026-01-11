@@ -13,6 +13,11 @@
 
 <p align="center">Mobile client for remote PC control</p>
 
+## Platform Support
+
+- [x] Android
+- [ ] iOS
+
 ## Overview
 
 PointZ is a Flutter mobile app that lets you control your PC from your phone. Works with [PointZerver](https://github.com/qol-tools/pointzerver) running on your computer.
@@ -27,7 +32,7 @@ PointZ is a Flutter mobile app that lets you control your PC from your phone. Wo
 
 ## Installation
 
-Download the APK from [Releases](https://github.com/qol-tools/pointz/releases) or build from source.
+Download from [Releases](https://github.com/qol-tools/pointz/releases) or build from source.
 
 ## Usage
 
@@ -41,8 +46,8 @@ Download the APK from [Releases](https://github.com/qol-tools/pointz/releases) o
 **⚠️ IMPORTANT:** Clone to a path **without spaces**. Flutter/Gradle cannot build from paths containing spaces.
 
 ```bash
-make build    # Debug APK
-make release  # Release APK
+make build    # Build debug release
+make release  # Build production release
 make run      # Run on device
-make pair     # Pair phone (Android)
+make pair     # Pair phone via wireless ADB
 ```

@@ -94,14 +94,19 @@ jobs:
 
             Mobile client for remote PC control. Works with [PointZerver](https://github.com/qol-tools/pointzerver) running on your computer.
 
-            ### Download
+            ### Platform Support
 
-            - **Android APK**: `pointz-app.apk`
+            - [x] Android
+            - [ ] iOS
+
+            ### Downloads
+
+            - **Android**: `pointz-app.apk`
 
             ### Installation
 
-            1. Download `pointz-app.apk`
-            2. Install on your Android device
+            1. Download the app for your platform
+            2. Install on your mobile device
             3. Start [PointZerver](https://github.com/qol-tools/pointzerver) on your PC
             4. Launch PointZ and connect
 
