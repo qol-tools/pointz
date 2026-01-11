@@ -1,0 +1,117 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk pointz-app.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pointz-app.apk
+          path: pointz-app.apk
+          retention-days: 90
+
+  release:
+    name: Create Release
+    needs: [build-apk]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          mkdir -p release_files
+          for artifact_dir in artifacts/*/; do
+            if [ -d "$artifact_dir" ]; then
+              cp "$artifact_dir"* release_files/ 2>/dev/null || true
+            fi
+          done
+          echo "Release files:"
+          ls -lh release_files/
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: PointZ ${{ steps.version.outputs.version }}
+          body: |
+            ## PointZ ${{ steps.version.outputs.version }}
+
+            Mobile client for remote PC control. Works with [PointZerver](https://github.com/qol-tools/pointzerver) running on your computer.
+
+            ### Download
+
+            - **Android APK**: `pointz-app.apk`
+
+            ### Installation
+
+            1. Download `pointz-app.apk`
+            2. Install on your Android device
+            3. Start [PointZerver](https://github.com/qol-tools/pointzerver) on your PC
+            4. Launch PointZ and connect
+
+            ### Server Installation
+
+            Get the server from [PointZerver releases](https://github.com/qol-tools/pointzerver/releases) or install as a [qol-tray](https://github.com/qol-tools/qol-tray) plugin:
+
+            ```bash
+            git clone https://github.com/qol-tools/plugin-pointz ~/.config/qol-tray/plugins/plugin-pointz
+            ```
+          files: release_files/*
+          draft: false
+          prerelease: false
