@@ -4,14 +4,57 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+enum ServerCompatibility { ready, needsCurrentApp, needsCurrentDesktop }
+
 class DiscoveredServer {
+  static const String requiredAuthentication = 'pair-spake2-v2';
+  static const String requiredCommand = 'sealed-v3';
+
   final InternetAddress address;
   final String hostname;
+  final String? serverId;
+  final String? authentication;
+  final String? command;
+  final bool pairingOpen;
 
   const DiscoveredServer({
     required this.address,
     required this.hostname,
+    this.serverId,
+    this.authentication,
+    this.command,
+    this.pairingOpen = false,
   });
+
+  static DiscoveredServer? tryParse(String message, InternetAddress address) {
+    try {
+      final json = jsonDecode(message) as Map<String, dynamic>;
+      return DiscoveredServer(
+        address: address,
+        hostname:
+            _stringOrNull(json['hostname']) ?? ServerDiscovery.unknownHostname,
+        serverId: _stringOrNull(json['server_id']),
+        authentication: _stringOrNull(json['authentication']),
+        command: _stringOrNull(json['command']),
+        pairingOpen: json['pairing_open'] == true,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String? _stringOrNull(Object? value) => value is String ? value : null;
+
+  ServerCompatibility get compatibility {
+    if (serverId == null || authentication == null || command == null) {
+      return ServerCompatibility.needsCurrentDesktop;
+    }
+    if (authentication != requiredAuthentication ||
+        command != requiredCommand) {
+      return ServerCompatibility.needsCurrentApp;
+    }
+    return ServerCompatibility.ready;
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -50,13 +93,21 @@ class ServerDiscovery {
   }
 
   void _parseAndEmitServer(Datagram datagram) {
-    final hostname = extractHostname(datagram);
-    if (hostname == null) return;
+    final server = extractServer(datagram);
+    if (server == null) return;
 
-    _serverController.add(DiscoveredServer(
-      address: datagram.address,
-      hostname: hostname,
-    ));
+    _serverController.add(server);
+  }
+
+  DiscoveredServer? extractServer(Datagram datagram) {
+    final message = utf8.decode(datagram.data, allowMalformed: true);
+    final parsed = DiscoveredServer.tryParse(message, datagram.address);
+    if (parsed != null) return parsed;
+
+    final legacyHostname = parseLegacyHostname(message, datagram.address);
+    if (legacyHostname == null) return null;
+    return DiscoveredServer(
+        address: datagram.address, hostname: legacyHostname);
   }
 
   String? extractHostname(Datagram datagram) {
@@ -98,9 +149,9 @@ class ServerDiscovery {
     await _discoverOnAllInterfaces(data);
   }
 
-
   Future<void> _discoverOnAllInterfaces(List<int> data) async {
-    final interfaces = await NetworkInterface.list().catchError((_) => <NetworkInterface>[]);
+    final interfaces =
+        await NetworkInterface.list().catchError((_) => <NetworkInterface>[]);
     final subnetBroadcasts = interfaces
         .expand((interface) => interface.addresses)
         .where((address) => address.type == InternetAddressType.IPv4)

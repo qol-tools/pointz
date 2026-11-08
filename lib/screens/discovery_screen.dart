@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/discovery_service.dart';
+import '../services/pairing/pairing_store.dart';
 import 'control_screen.dart';
+import 'pairing_screen.dart';
 
 class DiscoveryScreen extends StatefulWidget {
   const DiscoveryScreen({super.key});
@@ -12,6 +14,7 @@ class DiscoveryScreen extends StatefulWidget {
 class _DiscoveryScreenState extends State<DiscoveryScreen> {
   ServerDiscovery? _discovery;
   final Set<DiscoveredServer> _discoveredServers = {};
+  final PairingStore _pairingStore = PairingStore();
   bool _isDiscovering = false;
 
   @override
@@ -30,6 +33,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
     _discovery!.discoveredServers.listen((server) {
       if (mounted) {
         setState(() {
+          _discoveredServers.remove(server);
           _discoveredServers.add(server);
           _isDiscovering = false;
         });
@@ -47,15 +51,66 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
     });
   }
 
-  void _connectToServer(DiscoveredServer server) {
+  String? _incompatibilityMessage(DiscoveredServer server) {
+    switch (server.compatibility) {
+      case ServerCompatibility.ready:
+        return null;
+      case ServerCompatibility.needsCurrentApp:
+        return 'This app is older than PointZerver, update it';
+      case ServerCompatibility.needsCurrentDesktop:
+        return 'PointZerver on the desktop is older, update it';
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _connectToServer(DiscoveredServer server) async {
+    final incompatibility = _incompatibilityMessage(server);
+    if (incompatibility != null) {
+      _showMessage(incompatibility);
+      return;
+    }
+    final pairing = await _pairingStore.find(server.serverId!);
+    if (!mounted) return;
+    if (pairing == null) {
+      _openPairing(server);
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ControlScreen(
           serverAddress: server.address,
+          pairing: pairing,
         ),
       ),
     );
+  }
+
+  void _openPairing(DiscoveredServer server) {
+    if (server.compatibility != ServerCompatibility.ready) return;
+    if (!server.pairingOpen) {
+      _showMessage('Start pairing in PointZerver first');
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PairingScreen(server: server),
+      ),
+    );
+  }
+
+  String _serverSubtitle(DiscoveredServer server) {
+    final incompatibility = _incompatibilityMessage(server);
+    if (incompatibility != null) {
+      return '${server.address.address} - $incompatibility';
+    }
+    if (server.pairingOpen) return '${server.address.address} - pairing open';
+    return server.address.address;
   }
 
   @override
@@ -96,9 +151,10 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.computer),
                         title: Text(server.hostname),
-                        subtitle: Text(server.address.address),
+                        subtitle: Text(_serverSubtitle(server)),
                         trailing: const Icon(Icons.arrow_forward),
                         onTap: () => _connectToServer(server),
+                        onLongPress: () => _openPairing(server),
                       ),
                     );
                   },

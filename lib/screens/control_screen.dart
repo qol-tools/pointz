@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import '../services/command_service.dart';
 import '../services/settings_service.dart';
+import '../services/pairing/pairing_store.dart';
 import '../features/gesture/gesture_handler.dart';
 import '../features/gesture/gesture_detector.dart';
 import '../features/gesture/config/gesture_config.dart';
@@ -13,10 +14,12 @@ import 'settings_screen.dart';
 
 class ControlScreen extends StatefulWidget {
   final InternetAddress serverAddress;
+  final PairedServer pairing;
 
   const ControlScreen({
     super.key,
     required this.serverAddress,
+    required this.pairing,
   });
 
   @override
@@ -51,7 +54,7 @@ class _ControlScreenState extends State<ControlScreen> {
   }
 
   void _initializeHandlers() {
-    _commandService = CommandService(widget.serverAddress);
+    _commandService = CommandService(widget.serverAddress, widget.pairing);
     final executor = CommandServiceExecutor(_commandService);
     final keyboardExecutor = CommandServiceKeyboardExecutor(_commandService);
     _gestureHandler = GestureHandler(executor, _gestureConfig);
@@ -95,14 +98,14 @@ class _ControlScreenState extends State<ControlScreen> {
   Future<void> _handleKeyEvent(KeyEvent event) async {
     if (!_isConnected) return;
 
-    final ctrl = _isModifierPressed(LogicalKeyboardKey.controlLeft) || 
-                 _isModifierPressed(LogicalKeyboardKey.controlRight);
-    final alt = _isModifierPressed(LogicalKeyboardKey.altLeft) || 
-                _isModifierPressed(LogicalKeyboardKey.altRight);
-    final shift = _isModifierPressed(LogicalKeyboardKey.shiftLeft) || 
-                  _isModifierPressed(LogicalKeyboardKey.shiftRight);
-    final meta = _isModifierPressed(LogicalKeyboardKey.metaLeft) || 
-                 _isModifierPressed(LogicalKeyboardKey.metaRight);
+    final ctrl = _isModifierPressed(LogicalKeyboardKey.controlLeft) ||
+        _isModifierPressed(LogicalKeyboardKey.controlRight);
+    final alt = _isModifierPressed(LogicalKeyboardKey.altLeft) ||
+        _isModifierPressed(LogicalKeyboardKey.altRight);
+    final shift = _isModifierPressed(LogicalKeyboardKey.shiftLeft) ||
+        _isModifierPressed(LogicalKeyboardKey.shiftRight);
+    final meta = _isModifierPressed(LogicalKeyboardKey.metaLeft) ||
+        _isModifierPressed(LogicalKeyboardKey.metaRight);
 
     if (event is KeyDownEvent) {
       final key = _keyEventToString(event);
@@ -115,19 +118,19 @@ class _ControlScreenState extends State<ControlScreen> {
           meta: meta,
         );
       }
-      
+
       // Handle modifier keys themselves
-      if (event.logicalKey == LogicalKeyboardKey.controlLeft || 
+      if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
           event.logicalKey == LogicalKeyboardKey.controlRight) {
         await _keyboardHandler.handleModifierPress('ctrl');
-      } else if (event.logicalKey == LogicalKeyboardKey.altLeft || 
-                 event.logicalKey == LogicalKeyboardKey.altRight) {
+      } else if (event.logicalKey == LogicalKeyboardKey.altLeft ||
+          event.logicalKey == LogicalKeyboardKey.altRight) {
         await _keyboardHandler.handleModifierPress('alt');
-      } else if (event.logicalKey == LogicalKeyboardKey.shiftLeft || 
-                 event.logicalKey == LogicalKeyboardKey.shiftRight) {
+      } else if (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+          event.logicalKey == LogicalKeyboardKey.shiftRight) {
         await _keyboardHandler.handleModifierPress('shift');
-      } else if (event.logicalKey == LogicalKeyboardKey.metaLeft || 
-                 event.logicalKey == LogicalKeyboardKey.metaRight) {
+      } else if (event.logicalKey == LogicalKeyboardKey.metaLeft ||
+          event.logicalKey == LogicalKeyboardKey.metaRight) {
         await _keyboardHandler.handleModifierPress('meta');
       }
     } else if (event is KeyUpEvent) {
@@ -141,19 +144,19 @@ class _ControlScreenState extends State<ControlScreen> {
           meta: meta,
         );
       }
-      
+
       // Handle modifier keys themselves
-      if (event.logicalKey == LogicalKeyboardKey.controlLeft || 
+      if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
           event.logicalKey == LogicalKeyboardKey.controlRight) {
         await _keyboardHandler.handleModifierRelease('ctrl');
-      } else if (event.logicalKey == LogicalKeyboardKey.altLeft || 
-                 event.logicalKey == LogicalKeyboardKey.altRight) {
+      } else if (event.logicalKey == LogicalKeyboardKey.altLeft ||
+          event.logicalKey == LogicalKeyboardKey.altRight) {
         await _keyboardHandler.handleModifierRelease('alt');
-      } else if (event.logicalKey == LogicalKeyboardKey.shiftLeft || 
-                 event.logicalKey == LogicalKeyboardKey.shiftRight) {
+      } else if (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+          event.logicalKey == LogicalKeyboardKey.shiftRight) {
         await _keyboardHandler.handleModifierRelease('shift');
-      } else if (event.logicalKey == LogicalKeyboardKey.metaLeft || 
-                 event.logicalKey == LogicalKeyboardKey.metaRight) {
+      } else if (event.logicalKey == LogicalKeyboardKey.metaLeft ||
+          event.logicalKey == LogicalKeyboardKey.metaRight) {
         await _keyboardHandler.handleModifierRelease('meta');
       }
     }
@@ -179,7 +182,7 @@ class _ControlScreenState extends State<ControlScreen> {
 
   Future<void> _handleTextInput(String text) async {
     if (!_isConnected) return;
-    
+
     // Only process new characters
     if (text.length > _previousText.length) {
       final newChars = text.substring(_previousText.length);
@@ -195,7 +198,7 @@ class _ControlScreenState extends State<ControlScreen> {
       await Future.delayed(const Duration(milliseconds: 10));
       await _keyboardHandler.handleKeyRelease('\x08');
     }
-    
+
     _previousText = text;
   }
 
