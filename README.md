@@ -22,6 +22,12 @@ make build
 
 Clone to a path without spaces; Flutter and Gradle reject paths containing whitespace.
 
+## Pairing
+
+The desktop shows a 6-digit code while pairing is open. Pick the desktop in the app, type the code, and tap Pair. The phone and desktop prove they know the same code without sending it, and every command afterwards is encrypted with a key only that pair holds.
+
+A phone pairs with one desktop at a time per pairing; each desktop you use needs its own. If the desktop forgets the phone, open pairing on the desktop again, long-press the desktop in the app, and pair once more.
+
 ## About
 
 The mobile half of qol's PointZ remote-control plugin.
