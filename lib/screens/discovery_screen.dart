@@ -56,9 +56,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
       case ServerCompatibility.ready:
         return null;
       case ServerCompatibility.needsCurrentApp:
-        return 'Needs the current app';
+        return 'This app is older than the desktop, update it';
       case ServerCompatibility.needsCurrentDesktop:
-        return 'Needs the current desktop';
+        return 'Older PointZ on the desktop, update qol there';
     }
   }
 
