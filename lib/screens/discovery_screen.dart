@@ -56,9 +56,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
       case ServerCompatibility.ready:
         return null;
       case ServerCompatibility.needsCurrentApp:
-        return 'This app is older than the desktop, update it';
+        return 'This app is older than PointZerver, update it';
       case ServerCompatibility.needsCurrentDesktop:
-        return 'Older PointZ on the desktop, update qol there';
+        return 'PointZerver on the desktop is older, update it';
     }
   }
 
@@ -93,7 +93,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   void _openPairing(DiscoveredServer server) {
     if (server.compatibility != ServerCompatibility.ready) return;
     if (!server.pairingOpen) {
-      _showMessage('Open pairing on the desktop first');
+      _showMessage('Start pairing in PointZerver first');
       return;
     }
     Navigator.push(
