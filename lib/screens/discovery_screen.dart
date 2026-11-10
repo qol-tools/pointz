@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../services/discovery_service.dart';
 import '../services/pairing/pairing_store.dart';
@@ -15,12 +17,16 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   ServerDiscovery? _discovery;
   final Set<DiscoveredServer> _discoveredServers = {};
   final PairingStore _pairingStore = PairingStore();
+  static const Duration _refreshInterval = Duration(seconds: 3);
+
+  Timer? _refresh;
   bool _isDiscovering = false;
 
   @override
   void initState() {
     super.initState();
     _startDiscovery();
+    _refresh = Timer.periodic(_refreshInterval, (_) => _discovery?.discover());
   }
 
   Future<void> _startDiscovery() async {
@@ -83,7 +89,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ControlScreen(
-          serverAddress: server.address,
+          server: server,
           pairing: pairing,
         ),
       ),
@@ -115,6 +121,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
 
   @override
   void dispose() {
+    _refresh?.cancel();
     _discovery?.dispose();
     super.dispose();
   }
