@@ -83,7 +83,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ControlScreen(
-          serverAddress: server.address,
+          server: server,
           pairing: pairing,
         ),
       ),
