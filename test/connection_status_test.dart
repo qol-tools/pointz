@@ -65,20 +65,32 @@ void main() {
     expect(await read(reflected), null);
   });
 
-  test('a rejection of the open ping names why the desktop refused', () async {
-    expect(
-      await read(rejected('unknown_device', pingNonce)),
-      ConnectionStatus.removed,
-    );
-    expect(
-      await read(rejected('clock', pingNonce)),
-      ConnectionStatus.clockMismatch,
-    );
-  });
-
-  test('a rejection of another ping or with a new reason is ignored', () async {
+  test('a clear rejection of the open ping means this phone was removed',
+      () async {
+    expect(await read(rejected('unknown_device', pingNonce)),
+        ConnectionStatus.removed);
     expect(await read(rejected('unknown_device', otherNonce)), null);
     expect(await read(rejected('later', pingNonce)), null);
+  });
+
+  test('a clock rejection counts only when sealed with the device key',
+      () async {
+    final clock = {
+      'type': 'Rejected',
+      'reason': 'clock',
+      'nonce': encodeBase64Url(pingNonce),
+    };
+
+    expect(await read(await sealed(clock)), ConnectionStatus.clockMismatch);
+    expect(await read(await sealed(clock, withKey: otherKey)), null);
+    expect(await read(rejected('clock', pingNonce)), null);
+    expect(
+        await read(await sealed({
+          'type': 'Rejected',
+          'reason': 'unknown_device',
+          'nonce': encodeBase64Url(pingNonce),
+        })),
+        null);
   });
 
   test('anything that is not a reply is ignored', () async {
