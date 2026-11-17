@@ -16,6 +16,7 @@ void main() {
           'server_id': 'srv_1',
           'authentication': 'pair-spake2-v2',
           'command': 'sealed-v3',
+          'status': 'ping-v1',
           'pairing_open': true,
         }),
         address,
@@ -24,6 +25,22 @@ void main() {
       expect(server.hostname, 'desk');
       expect(server.serverId, 'srv_1');
       expect(server.pairingOpen, true);
+      expect(server.reportsStatus, true);
+      expect(server.compatibility, ServerCompatibility.ready);
+    });
+
+    test('a desktop without the status tag stays usable but unconfirmed', () {
+      final server = DiscoveredServer.tryParse(
+        jsonEncode({
+          'hostname': 'desk',
+          'server_id': 'srv_1',
+          'authentication': 'pair-spake2-v2',
+          'command': 'sealed-v3',
+        }),
+        address,
+      )!;
+
+      expect(server.reportsStatus, false);
       expect(server.compatibility, ServerCompatibility.ready);
     });
 

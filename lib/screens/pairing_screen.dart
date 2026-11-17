@@ -50,7 +50,7 @@ class _PairingScreenState extends State<PairingScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => ControlScreen(
-            serverAddress: widget.server.address,
+            server: widget.server,
             pairing: pairing,
           ),
         ),

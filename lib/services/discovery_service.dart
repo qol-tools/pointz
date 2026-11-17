@@ -9,12 +9,14 @@ enum ServerCompatibility { ready, needsCurrentApp, needsCurrentDesktop }
 class DiscoveredServer {
   static const String requiredAuthentication = 'pair-spake2-v2';
   static const String requiredCommand = 'sealed-v3';
+  static const String supportedStatus = 'ping-v1';
 
   final InternetAddress address;
   final String hostname;
   final String? serverId;
   final String? authentication;
   final String? command;
+  final String? status;
   final bool pairingOpen;
 
   const DiscoveredServer({
@@ -23,6 +25,7 @@ class DiscoveredServer {
     this.serverId,
     this.authentication,
     this.command,
+    this.status,
     this.pairingOpen = false,
   });
 
@@ -36,6 +39,7 @@ class DiscoveredServer {
         serverId: _stringOrNull(json['server_id']),
         authentication: _stringOrNull(json['authentication']),
         command: _stringOrNull(json['command']),
+        status: _stringOrNull(json['status']),
         pairingOpen: json['pairing_open'] == true,
       );
     } catch (_) {
@@ -55,6 +59,8 @@ class DiscoveredServer {
     }
     return ServerCompatibility.ready;
   }
+
+  bool get reportsStatus => status == supportedStatus;
 
   @override
   bool operator ==(Object other) =>

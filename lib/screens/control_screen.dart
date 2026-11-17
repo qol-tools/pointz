@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io';
 import '../services/command_service.dart';
+import '../services/connection_status.dart';
+import '../services/discovery_service.dart';
 import '../services/settings_service.dart';
 import '../services/pairing/pairing_store.dart';
 import '../features/gesture/gesture_handler.dart';
@@ -10,15 +11,16 @@ import '../features/gesture/config/gesture_config.dart';
 import '../features/mouse_control/implementations/command_service_executor.dart';
 import '../features/keyboard/keyboard_handler.dart';
 import '../features/keyboard/implementations/command_service_keyboard_executor.dart';
+import 'pairing_screen.dart';
 import 'settings_screen.dart';
 
 class ControlScreen extends StatefulWidget {
-  final InternetAddress serverAddress;
+  final DiscoveredServer server;
   final PairedServer pairing;
 
   const ControlScreen({
     super.key,
-    required this.serverAddress,
+    required this.server,
     required this.pairing,
   });
 
@@ -27,7 +29,11 @@ class ControlScreen extends StatefulWidget {
 }
 
 class _ControlScreenState extends State<ControlScreen> {
-  late CommandService _commandService;
+  late final CommandService _commandService = CommandService(
+    widget.server.address,
+    widget.pairing,
+    reportsStatus: widget.server.reportsStatus,
+  );
   late GestureHandler _gestureHandler;
   late FlutterGestureConverter _gestureConverter;
   late KeyboardHandler _keyboardHandler;
@@ -54,7 +60,6 @@ class _ControlScreenState extends State<ControlScreen> {
   }
 
   void _initializeHandlers() {
-    _commandService = CommandService(widget.serverAddress, widget.pairing);
     final executor = CommandServiceExecutor(_commandService);
     final keyboardExecutor = CommandServiceKeyboardExecutor(_commandService);
     _gestureHandler = GestureHandler(executor, _gestureConfig);
@@ -64,9 +69,72 @@ class _ControlScreenState extends State<ControlScreen> {
 
   Future<void> _connect() async {
     await _commandService.connect();
+    if (!mounted) return;
     setState(() {
       _isConnected = true;
     });
+  }
+
+  void _pairAgain() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PairingScreen(server: widget.server),
+      ),
+    );
+  }
+
+  Widget _buildStatus(BuildContext context, ConnectionStatus status) {
+    final (icon, color, label) = switch (status) {
+      ConnectionStatus.connecting => (Icons.sync, Colors.grey, 'Connecting...'),
+      ConnectionStatus.connected => (
+        Icons.check_circle,
+        Colors.green,
+        'Connected',
+      ),
+      ConnectionStatus.notResponding => (
+        Icons.error,
+        Colors.red,
+        'Desktop not responding',
+      ),
+      ConnectionStatus.removed => (
+        Icons.link_off,
+        Colors.red,
+        'This phone was removed from PointZerver',
+      ),
+      ConnectionStatus.clockMismatch => (
+        Icons.schedule,
+        Colors.orange,
+        'Phone and desktop clocks differ by over 30 seconds',
+      ),
+      ConnectionStatus.unconfirmed => (
+        Icons.help,
+        Colors.grey,
+        'Sending. Update PointZerver to see the connection state',
+      ),
+    };
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 64, color: color),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
+        if (status == ConnectionStatus.removed) ...[
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _pairAgain,
+            child: const Text('Pair again'),
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _onScaleStart(ScaleStartDetails details) async {
@@ -218,7 +286,7 @@ class _ControlScreenState extends State<ControlScreen> {
       onKeyEvent: _handleKeyEvent,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Control - ${widget.serverAddress.address}'),
+          title: Text('Control - ${widget.server.address.address}'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context),
@@ -255,15 +323,10 @@ class _ControlScreenState extends State<ControlScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          _isConnected ? Icons.check_circle : Icons.error,
-                          size: 64,
-                          color: _isConnected ? Colors.green : Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _isConnected ? 'Connected' : 'Disconnected',
-                          style: Theme.of(context).textTheme.titleLarge,
+                        ValueListenableBuilder<ConnectionStatus>(
+                          valueListenable: _commandService.status,
+                          builder: (context, status, _) =>
+                              _buildStatus(context, status),
                         ),
                         const SizedBox(height: 32),
                         const Text(
